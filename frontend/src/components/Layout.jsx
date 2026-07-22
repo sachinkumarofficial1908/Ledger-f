@@ -8,6 +8,7 @@ const links = [
   { to: "/", label: "Dashboard", icon: "grid", end: true },
   { label: "Paid by", icon: "users", action: "paidByMaster" },
   { to: "/reports", label: "Reports", icon: "chart" },
+  { to: "/purchase-orders", label: "Purchase Orders", icon: "layers" },
 ];
 
 const superAdminLinks = [{ to: "/users", label: "Users", icon: "users" }];

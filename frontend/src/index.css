@@ -306,6 +306,25 @@ textarea:focus-visible {
 }
 
 /* ---------- cards / surfaces ---------- */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  text-transform: capitalize;
+  background: var(--surface-2);
+  color: var(--text-1);
+}
+.pill--credit {
+  color: var(--credit);
+  background: rgba(63, 221, 160, 0.14);
+}
+.pill--debit {
+  color: var(--debit);
+  background: rgba(255, 122, 122, 0.14);
+}
+
 .card {
   background: var(--glass);
   border: 1px solid var(--border-soft);
