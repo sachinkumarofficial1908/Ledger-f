@@ -1,20 +1,27 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import { authApi } from "../api/auth.js";
 import { ApiClientError } from "../api/client.js";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
+  const location = useLocation();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (location.pathname === "/login") {
+      setLoading(false);
+      return;
+    }
+
     authApi
       .me()
       .then((res) => setUser(res?.data?.user || null))
       .catch(() => setUser(null))
       .finally(() => setLoading(false));
-  }, []);
+  }, [location.pathname]);
 
   const login = useCallback(async (email, password) => {
     const res = await authApi.login(email, password);

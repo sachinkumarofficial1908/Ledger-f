@@ -33,14 +33,9 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    load("");
-  }, [load]);
-
-  useEffect(() => {
     const id = setTimeout(() => load(search), 350);
     return () => clearTimeout(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search]);
+  }, [load, search]);
 
   return (
     <div>

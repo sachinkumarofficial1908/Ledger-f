@@ -36,6 +36,9 @@ npm run build
 npm run preview   # to sanity-check the production build locally
 ```
 
+When deploying on Vercel, keep `vercel.json` in the frontend project root. It rewrites
+React Router URLs like `/login` and `/clients/:id` back to `index.html`.
+
 ## What's here
 
 - **Auth** — cookie-based session (the backend sets httpOnly JWT cookies), with silent
