@@ -197,27 +197,6 @@ export function Layout({ children }) {
           </div>
         </div>
 
-        <div className="mobileMenuBar">
-          {navItems.map((l) =>
-            l.action === "paidByMaster" ? (
-              <button key={l.label} type="button" className="mobileMenuBar__item" onClick={openPaidByMaster}>
-                <Icon name={l.icon} size={16} />
-                {l.label}
-              </button>
-            ) : (
-              <NavLink
-                key={l.to}
-                to={l.to}
-                end={l.end}
-                className={({ isActive }) => "mobileMenuBar__item" + (isActive ? " active" : "")}
-              >
-                <Icon name={l.icon} size={16} />
-                {l.label}
-              </NavLink>
-            )
-          )}
-        </div>
-
         {children}
 
         {showPaidByMaster && (

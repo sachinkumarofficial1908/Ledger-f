@@ -681,40 +681,10 @@ tbody tr:last-child td {
   opacity: 1;
 }
 
-/* ---------- mobile bottom nav ---------- */
-.mobileMenuBar {
-  display: none;
-}
 .bottomNav {
   display: none;
 }
 @media (max-width: 860px) {
-  .mobileMenuBar {
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    padding: 0 0 12px;
-    margin-bottom: 12px;
-    border-bottom: 1px solid var(--border-soft);
-  }
-  .mobileMenuBar__item {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 12px;
-    border-radius: 999px;
-    background: var(--surface-0);
-    border: 1px solid var(--border-soft);
-    color: var(--text-1);
-    font-size: 12px;
-    font-weight: 600;
-    white-space: nowrap;
-    cursor: pointer;
-  }
-  .mobileMenuBar__item.active {
-    background: var(--gold-soft);
-    color: var(--gold);
-  }
   .bottomNav {
     display: flex;
     position: fixed;
