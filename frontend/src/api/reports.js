@@ -7,6 +7,7 @@ function qs(params = {}) {
 }
 
 export const reportsApi = {
+  overview: (params) => api.get(`/reports/overview${qs(params)}`),
   summary: (params) => api.get(`/reports/summary${qs(params)}`),
   client: (id, params) => api.get(`/reports/client/${id}${qs(params)}`),
 };

@@ -1,4 +1,4 @@
-import { api } from "./client.js";
+import { api, postBinaryForBlob } from "./client.js";
 
 function qs(params = {}) {
   const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== "" && v !== null);
@@ -13,4 +13,5 @@ export const purchaseOrdersApi = {
   update: (id, data) => api.put(`/purchase-orders/${id}`, data),
   remove: (id) => api.del(`/purchase-orders/${id}`),
   restore: (id) => api.post(`/purchase-orders/${id}/restore`),
+  convertDocxToPdf: (docxBlob) => postBinaryForBlob("/purchase-orders/convert-to-pdf", docxBlob),
 };

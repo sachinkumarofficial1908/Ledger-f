@@ -188,6 +188,7 @@ export default function PurchaseOrders() {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyForm());
   const [saving, setSaving] = useState(false);
+  const [convertingId, setConvertingId] = useState(null);
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [templateContent, setTemplateContent] = useState(() => readTemplateContent());
   const [templateDraft, setTemplateDraft] = useState(() => readTemplateContent());
@@ -442,220 +443,10 @@ export default function PurchaseOrders() {
     doc.save(`${order.poNumber || "purchase-order"}.pdf`);
   };
 
-  const downloadTemplatePdf = (order) => {
-    const doc = new jsPDF({ unit: "pt", format: "a4" });
-    const margin = 28;
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const subtotal = (order.items || []).reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unitPrice || 0), 0);
-    const tax = Number(order.taxAmount || 0);
-    const shipping = Number(order.shippingCost || 0);
-    const discount = Number(order.discountAmount || 0);
-    const grandTotal = Number(order.grandTotal || subtotal + tax + shipping - discount);
-    const content = normalizeTemplateContent(templateContent);
-    const billing = content.billing;
-    const items = (order.items || []).length ? order.items : [emptyItem()];
-    const cleanPoNumber = String(order.poNumber || "").replace(/^po[-\s]*/i, "");
-    const poDate = formatTemplateDate(order.orderDate);
-    const printableWidth = pageWidth - margin * 2;
-    const footerTop = pageHeight - 58;
-    let y = 78;
-
-    const formatPlainAmount = (value, options = {}) => {
-      const amount = Number(value || 0);
-      return amount.toLocaleString("en-IN", {
-        minimumFractionDigits: options.minimumFractionDigits ?? 0,
-        maximumFractionDigits: options.maximumFractionDigits ?? 2,
-        useGrouping: false,
-      });
-    };
-
-    const drawHeaderFooter = () => {
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(13);
-      doc.setTextColor(17, 22, 212);
-      doc.text(toTitleCase(billing.companyName), pageWidth - margin, 30, { align: "right" });
-      doc.setFontSize(9);
-      doc.setTextColor(0, 0, 0);
-      doc.text(`GSTIN-${billing.gst || ""}`, pageWidth - margin, 46, { align: "right" });
-      doc.setDrawColor(0, 0, 0);
-      doc.setLineWidth(1);
-      doc.line(0, pageHeight - 66, pageWidth, pageHeight - 66);
-      doc.setFontSize(8);
-      doc.setFont("helvetica", "bold");
-      doc.text("CONTACT ADDRESS:-", 112, pageHeight - 42);
-      doc.setFont("helvetica", "normal");
-      doc.text(billing.address || "", 210, pageHeight - 42);
-      doc.setFont("helvetica", "bold");
-      doc.text("Mobile", 75, pageHeight - 24);
-      doc.setFont("helvetica", "normal");
-      doc.text(`:-${billing.mobile || ""}`, 106, pageHeight - 24);
-      doc.setFont("helvetica", "bold");
-      doc.text("Emailid:", 310, pageHeight - 24);
-      doc.setTextColor(0, 0, 255);
-      doc.setFont("helvetica", "normal");
-      doc.text(billing.email || "", 350, pageHeight - 24);
-      doc.setTextColor(0, 0, 0);
-    };
-
-    const ensureSpace = (height) => {
-      if (y + height < footerTop) return;
-      doc.addPage();
-      drawHeaderFooter();
-      y = 78;
-    };
-
-    const drawWrappedText = (text, x, width, options = {}) => {
-      doc.setFont("helvetica", options.bold ? "bold" : "normal");
-      doc.setFontSize(options.size || 9);
-      const lines = doc.splitTextToSize(String(text || ""), width);
-      ensureSpace(lines.length * (options.lineHeight || 12) + 6);
-      doc.text(lines, x, y, { align: options.align || "left" });
-      y += lines.length * (options.lineHeight || 12) + (options.after ?? 6);
-    };
-
-    const drawCell = (text, x, top, width, height, options = {}) => {
-      if (options.fill) {
-        doc.setFillColor(options.fill[0], options.fill[1], options.fill[2]);
-        doc.rect(x, top, width, height, "FD");
-      } else {
-        doc.rect(x, top, width, height);
-      }
-      doc.setFont("helvetica", options.bold ? "bold" : "normal");
-      doc.setFontSize(options.size || 7.4);
-      const lines = doc.splitTextToSize(String(text || ""), width - 6);
-      doc.text(lines.slice(0, Math.max(1, Math.floor((height - 5) / 9))), x + width / 2, top + 10, { align: options.align || "center" });
-    };
-
-    const drawDetailsTable = () => {
-      const left = margin + 54;
-      const tableWidth = printableWidth - 108;
-      const colWidth = tableWidth / 2;
-      const rows = [
-        ["", ""],
-        [`Name-${order.vendorName || ""}`, `Name-${billing.companyName || ""}`],
-        [`Address - ${order.vendorAddress || ""}`, `Address - ${billing.address || ""}`],
-        [`Mobile-${order.vendorPhone || ""}`, `Mobile-${billing.mobile || ""}`],
-        [`Email: ${order.vendorEmail || ""}`, `Email-${billing.email || ""}`],
-        [`GSTRegNo.:${order.vendorGst || order.gstNumber || ""}`, `GSTRegNo.:${billing.gst || ""}`],
-      ];
-      rows.forEach((row, index) => {
-        const rowHeight = index === 0 ? 24 : 26;
-        ensureSpace(rowHeight);
-        drawCell(row[0], left, y, colWidth, rowHeight, { fill: index === 0 ? [145, 207, 80] : null, size: 8 });
-        drawCell(row[1], left + colWidth, y, colWidth, rowHeight, { fill: index === 0 ? [145, 207, 80] : null, size: 8 });
-        y += rowHeight;
-      });
-      y += 14;
-    };
-
-    const buildItemRows = () => {
-      const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
-      return items.map((item, index) => {
-        const quantity = Number(item.quantity || 0);
-        const unitPrice = Number(item.unitPrice || 0);
-        const baseTotal = Number(item.lineTotal || quantity * unitPrice);
-        const taxShare = tax > 0 && subtotal > 0
-          ? tax * (baseTotal / subtotal)
-          : tax > 0 && totalQuantity > 0
-            ? tax * (quantity / totalQuantity)
-            : 0;
-        return [
-          `${index + 1}.`,
-          item.hsnSacCode || item.hsnCode || "",
-          [item.itemName, item.description].filter(Boolean).join(" "),
-          formatPlainAmount(quantity),
-          item.unit || "Nos",
-          formatPlainAmount(unitPrice, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-          formatPlainAmount(quantity > 0 ? taxShare / 2 / quantity : 0),
-          formatPlainAmount(quantity > 0 ? taxShare / 2 / quantity : 0),
-          formatPlainAmount(baseTotal + taxShare),
-        ];
-      });
-    };
-
-    const drawPriceTable = () => {
-      const colWidths = [32, 58, 145, 38, 38, 60, 50, 50, 60];
-      const headers = ["S.NO", "HSN/SAC Code", "Description of Work", "Qty", "UOM", "Unit Rate (INR)", "SGST 9%", "CGST 9%", "Total"];
-      const tableLeft = margin + 2;
-      const drawRow = (row, height, options = {}) => {
-        ensureSpace(height);
-        let x = tableLeft;
-        row.forEach((cellText, index) => {
-          drawCell(cellText, x, y, colWidths[index], height, { bold: options.bold, fill: options.fill, size: options.size || 7.2 });
-          x += colWidths[index];
-        });
-        y += height;
-      };
-
-      drawRow(headers, 28, { bold: true, fill: [242, 242, 242], size: 6.8 });
-      buildItemRows().forEach((row) => drawRow(row, 42));
-      drawRow(["", "", "", "", "", "", "", "Grand Total", formatPlainAmount(grandTotal)], 26, { bold: true });
-      y += 16;
-    };
-
-    drawHeaderFooter();
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(27);
-    doc.setTextColor(117, 145, 59);
-    doc.text("PURCHASE ORDER", pageWidth / 2, y, { align: "center" });
-    doc.setTextColor(0, 0, 0);
-    y += 30;
-    doc.setFontSize(10);
-    doc.text(`Purchase Order-${cleanPoNumber || order.poNumber || ""}`, pageWidth - margin - 132, y);
-    doc.text(`DATE-${poDate}`, pageWidth - margin - 48, y);
-    y += 24;
-
-    drawDetailsTable();
-    drawWrappedText("Dear Sir,", margin + 10, printableWidth - 20, { bold: true });
-    drawWrappedText(content.firstParagraph, margin + 10, printableWidth - 20, { after: 12 });
-    drawWrappedText("This Work Order represents the Company's offer to the Contractor under the terms and conditions stated herein and becomes binding upon acceptance, either through written acknowledgment or by commencing work. Acceptance is strictly limited to these terms; any additional or conflicting terms proposed by the Contractor, including in quotations or acknowledgments, are expressly rejected. Reference to any Contractor proposal does not imply acceptance of its terms. The Contractor must sign and return this Work Order within three (3) days of receipt. Failure to do so may delay payments or result in termination, though obligations under this Work Order remain in force", margin + 10, printableWidth - 20, { after: 12 });
-
-    ensureSpace(48);
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.text("Name:", margin + 18, y);
-    doc.text("Signature:", margin + 18, y + 16);
-    doc.setFont("helvetica", "bold");
-    doc.text("VENDOR'S ACCEPTANCE", margin + 190, y + 10);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Name: ${billing.representative || ""}`, pageWidth - margin - 160, y);
-    doc.text("Signature:", pageWidth - margin - 160, y + 16);
-    doc.setFont("helvetica", "bold");
-    doc.text(`For ${toTitleCase(billing.companyName)}`, pageWidth - margin - 160, y + 32);
-    y += 62;
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    doc.text(`Purchase Order-${cleanPoNumber || order.poNumber || ""} Price Schedule`, pageWidth / 2, y, { align: "center" });
-    y += 14;
-    drawPriceTable();
-    drawWrappedText(amountInWords(grandTotal), margin, printableWidth, { bold: true, align: "center", size: 10, after: 12 });
-
-    doc.setTextColor(237, 0, 0);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
-    doc.text("Terms and Conditions", pageWidth / 2, y, { align: "center" });
-    doc.setTextColor(0, 0, 0);
-    y += 18;
-
-    content.terms.forEach((term, index) => {
-      if (!term.heading && !term.content) return;
-      ensureSpace(40);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(9);
-      doc.text(`${index + 1}. ${term.heading || "Term"}`, margin + 36, y);
-      y += 13;
-      drawWrappedText(term.content, margin + 58, printableWidth - 80, { after: 4 });
-      if (term.heading.toLowerCase().includes("place") && content.placeOfSupplyAddress) {
-        drawWrappedText(content.placeOfSupplyAddress, margin + 58, printableWidth - 80, { bold: true, after: 6 });
-      }
-    });
-
-    doc.save(`${order.poNumber || "purchase-order"}.pdf`);
-  };
-
-  const downloadDocx = async (order) => {
+  // Builds the purchase order .docx as a Blob without downloading it, so it can
+  // be reused both for the "Download DOCX" button and as the source document
+  // sent to the PDF conversion API for "Download PDF".
+  const buildPurchaseOrderDocxBlob = async (order) => {
     const templatePath = "/templates/purchase-order-template.docx";
     const wordNs = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
     const subtotal = (order.items || []).reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unitPrice || 0), 0);
@@ -670,14 +461,14 @@ export default function PurchaseOrders() {
     const templateRes = await fetch(templatePath);
     if (!templateRes.ok) {
       setError("Purchase order template could not be loaded.");
-      return;
+      return null;
     }
 
     const zip = await JSZip.loadAsync(await templateRes.arrayBuffer());
     const documentXmlFile = zip.file("word/document.xml");
     if (!documentXmlFile) {
       setError("Purchase order template is not valid.");
-      return;
+      return null;
     }
 
     const xmlText = await documentXmlFile.async("text");
@@ -685,7 +476,7 @@ export default function PurchaseOrders() {
     const parseError = xml.getElementsByTagName("parsererror")[0];
     if (parseError) {
       setError("Purchase order template could not be prepared.");
-      return;
+      return null;
     }
 
     const textNodes = (node) => Array.from(node.getElementsByTagNameNS(wordNs, "t"));
@@ -731,10 +522,6 @@ export default function PurchaseOrders() {
     const paragraphs = () => Array.from(xml.getElementsByTagNameNS(wordNs, "p"));
     const setParagraphContaining = (needle, value) => {
       const target = paragraphs().find((paragraph) => paragraphText(paragraph).includes(needle));
-      if (target) setNodeText(target, value);
-    };
-    const setParagraphByText = (matcher, value) => {
-      const target = paragraphs().find((paragraph) => matcher(paragraphText(paragraph).replace(/\s+/g, " ").trim()));
       if (target) setNodeText(target, value);
     };
 
@@ -809,22 +596,83 @@ export default function PurchaseOrders() {
     });
     if (amountParagraph) setNodeText(amountParagraph, `               ${amountInWords(grandTotal)}`);
 
-    setParagraphByText((text) => text === "Place of Supply", content.terms[0]?.heading || "Place of Supply");
-    setParagraphByText((text) => text === "Client Approval", content.terms[1]?.heading || "Client Approval");
-    setParagraphByText((text) => text === "Payment Terms", content.terms[2]?.heading || "Payment Terms");
-    setParagraphByText((text) => text === "Delivery", content.terms[3]?.heading || "Delivery");
-    setParagraphByText((text) => text === "PO Validity", content.terms[4]?.heading || "PO Validity");
-    setParagraphByText((text) => text === "Jurisdiction", content.terms[5]?.heading || "Jurisdiction");
+    // The template has one fixed paragraph per original heading (Place of Supply,
+    // Client Approval, ...), so writing content.terms[N] into a fixed slot only
+    // works while the list has exactly 6 entries in that exact order. As soon as a
+    // heading is added or removed the array shifts and slots go out of sync (a
+    // removed heading resurfaces a stale default like "Jurisdiction" further down).
+    // Instead, rebuild this whole section from scratch: one heading+content block
+    // per entry in content.terms, matching how the PDF renders the same list.
+    const body = xml.getElementsByTagNameNS(wordNs, "body")[0];
+    const brTemplate = xml.getElementsByTagNameNS(wordNs, "br")[0];
+
+    const setNodeTextMultiline = (paragraph, value) => {
+      const runs = Array.from(paragraph.getElementsByTagNameNS(wordNs, "r"));
+      if (!runs.length) return;
+      const templateRun = runs[0].cloneNode(true);
+      runs.forEach((run) => run.parentNode.removeChild(run));
+      String(value ?? "").split("\n").forEach((line, index) => {
+        const run = templateRun.cloneNode(true);
+        const runTexts = Array.from(run.getElementsByTagNameNS(wordNs, "t"));
+        runTexts.slice(1).forEach((extra) => extra.parentNode.removeChild(extra));
+        if (index > 0 && brTemplate) run.insertBefore(brTemplate.cloneNode(true), runTexts[0] || null);
+        if (runTexts[0]) {
+          runTexts[0].textContent = line;
+          runTexts[0].setAttribute("xml:space", "preserve");
+        }
+        paragraph.appendChild(run);
+      });
+    };
+
+    const termsHeadingParagraph = paragraphs().find((p) => paragraphText(p).trim() === "Terms and Conditions");
+    if (body && termsHeadingParagraph) {
+      const headingTemplate = paragraphs().find((p) => paragraphText(p).trim() === "Client Approval")?.cloneNode(true);
+      const contentTemplate = paragraphs().find((p) => paragraphText(p).includes("final measurement and certification"))?.cloneNode(true);
+      const addressTemplate = paragraphs().find((p) => paragraphText(p).includes("JainX Cyber City"))?.cloneNode(true);
+      const deliveryContent = paragraphs().find((p) => paragraphText(p).includes("material shall be delivered"));
+      const blankTemplate = deliveryContent?.nextElementSibling?.cloneNode(true);
+      const sectPr = Array.from(body.childNodes).find((node) => node.nodeType === 1 && node.localName === "sectPr");
+
+      // Remove every existing heading/content paragraph in the section, keeping
+      // the blank spacer directly under "Terms and Conditions" and the section end.
+      let cursor = termsHeadingParagraph.nextElementSibling?.nextElementSibling;
+      while (cursor && cursor !== sectPr) {
+        const next = cursor.nextElementSibling;
+        body.removeChild(cursor);
+        cursor = next;
+      }
+
+      if (headingTemplate && contentTemplate && blankTemplate) {
+        content.terms.forEach((term) => {
+          if (!term.heading && !term.content) return;
+          const headingLower = (term.heading || "").toLowerCase();
+          const nodes = [];
+
+          const heading = headingTemplate.cloneNode(true);
+          setNodeText(heading, term.heading || "Term");
+          nodes.push(heading);
+
+          const contentNode = contentTemplate.cloneNode(true);
+          setNodeTextMultiline(contentNode, term.content || "");
+          nodes.push(contentNode);
+
+          if (headingLower.includes("place") && addressTemplate && content.placeOfSupplyAddress) {
+            const address = addressTemplate.cloneNode(true);
+            setNodeTextMultiline(address, content.placeOfSupplyAddress);
+            nodes.push(address);
+          }
+
+          nodes.push(blankTemplate.cloneNode(true));
+
+          nodes.forEach((node) => {
+            if (sectPr) body.insertBefore(node, sectPr);
+            else body.appendChild(node);
+          });
+        });
+      }
+    }
 
     setParagraphContaining("We are pleased to place an order", content.firstParagraph);
-    setParagraphContaining("All services under this PO", content.terms[0]?.content || "");
-    setParagraphContaining("JainX Cyber City", `                             ${content.placeOfSupplyAddress || ""}`);
-    setParagraphContaining("The final measurement and certification", content.terms[1]?.content || "");
-    setParagraphContaining("Rs 364161", content.terms[2]?.content?.split("\n")[0] || "");
-    setParagraphContaining("The quoted price is inclusive", content.terms[2]?.content?.split("\n").slice(1).join("\n") || "");
-    setParagraphContaining("The material shall be delivered", content.terms[3]?.content || "");
-    setParagraphContaining("This Purchase Order shall", content.terms[4]?.content || "");
-    setParagraphContaining("All disputes shall", content.terms[5]?.content || "");
 
     zip.file("word/document.xml", new XMLSerializer().serializeToString(xml));
 
@@ -841,7 +689,16 @@ export default function PurchaseOrders() {
           textNode.textContent = "";
         });
       };
-      const localParagraphs = Array.from(parsedXml.getElementsByTagNameNS(wordNs, "p"));
+      // The footer's contact line lives in a floating text box: the paragraph that
+      // hosts the drawing also recursively contains the address/mobile/email
+      // paragraphs nested inside it via getElementsByTagNameNS. Searching the full,
+      // unfiltered list matches that outer host paragraph for all three lookups
+      // (it contains all three strings), so every lookup resolved to the same node
+      // and each subsequent write wiped out the previous one's text. Restricting to
+      // "leaf" paragraphs (no nested <w:p> of their own) selects the actual
+      // individually-positioned address/mobile/email paragraph for each lookup.
+      const localParagraphs = Array.from(parsedXml.getElementsByTagNameNS(wordNs, "p"))
+        .filter((paragraph) => paragraph.getElementsByTagNameNS(wordNs, "p").length === 0);
       const localParagraphText = (paragraph) => localTextNodes(paragraph).map((node) => node.textContent).join("");
       updater(localParagraphs, localParagraphText, localSetNodeText);
       zip.file(path, new XMLSerializer().serializeToString(parsedXml));
@@ -863,18 +720,42 @@ export default function PurchaseOrders() {
       if (emailParagraph) localSetNodeText(emailParagraph, `Emailid:${billing.email || ""}`);
     });
 
-    const blob = await zip.generateAsync({
+    return zip.generateAsync({
       type: "blob",
       mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     });
+  };
+
+  const downloadBlob = (blob, filename) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${order.poNumber || "purchase-order"}.docx`;
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+  };
+
+  const downloadDocx = async (order) => {
+    const blob = await buildPurchaseOrderDocxBlob(order);
+    if (!blob) return;
+    downloadBlob(blob, `${order.poNumber || "purchase-order"}.docx`);
+  };
+
+  const downloadPdfViaConversion = async (order) => {
+    setError("");
+    setConvertingId(order._id);
+    try {
+      const docxBlob = await buildPurchaseOrderDocxBlob(order);
+      if (!docxBlob) return;
+      const pdfBlob = await purchaseOrdersApi.convertDocxToPdf(docxBlob);
+      downloadBlob(pdfBlob, `${order.poNumber || "purchase-order"}.pdf`);
+    } catch (err) {
+      setError(err instanceof ApiClientError ? err.message : "Couldn't convert purchase order to PDF.");
+    } finally {
+      setConvertingId(null);
+    }
   };
 
   return (
@@ -917,7 +798,6 @@ export default function PurchaseOrders() {
                 <th>PO No.</th>
                 <th>Vendor</th>
                 <th>Date</th>
-                <th>Status</th>
                 <th>Grand total</th>
                 <th></th>
               </tr>
@@ -928,17 +808,19 @@ export default function PurchaseOrders() {
                   <td>{order.poNumber}</td>
                   <td>{order.vendorName}</td>
                   <td>{formatDate(order.orderDate)}</td>
-                  <td>
-                    <span className={`pill ${order.status === "received" ? "pill--credit" : "pill--debit"}`}>{order.status}</span>
-                  </td>
                   <td>{formatMoney(order.grandTotal || 0)}</td>
                   <td>
                     <div className="rowActions">
                       <button className="iconBtn" onClick={() => openEdit(order)} aria-label="Edit purchase order">
                         <Icon name="edit" size={14} />
                       </button>
-                      <button className="iconBtn" onClick={() => downloadTemplatePdf(order)} aria-label="Download PDF">
-                        <Icon name="chart" size={14} />
+                      <button
+                        className="iconBtn"
+                        onClick={() => downloadPdfViaConversion(order)}
+                        aria-label="Download PDF"
+                        disabled={convertingId === order._id}
+                      >
+                        {convertingId === order._id ? <span className="spinner" /> : <Icon name="chart" size={14} />}
                       </button>
                       <button className="iconBtn" onClick={() => downloadDocx(order)} aria-label="Download DOCX">
                         <Icon name="layers" size={14} />

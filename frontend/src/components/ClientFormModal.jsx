@@ -19,6 +19,7 @@ export function ClientFormModal({ parentClient = null, initial = null, onClose, 
     description: initial?.description || "",
     openingBalance: initial?.openingBalance || 0,
     openingBalanceType: initial?.openingBalanceType || "credit",
+    goalAmount: initial?.goalAmount || 0,
     paidByOptionsText: (initial?.paidByOptions || []).join(", "),
     paidToOptionsText: (initial?.paidToOptions || []).join(", "),
   });
@@ -35,6 +36,7 @@ export function ClientFormModal({ parentClient = null, initial = null, onClose, 
       const payload = {
         ...form,
         openingBalance: Number(form.openingBalance) || 0,
+        goalAmount: Number(form.goalAmount) || 0,
         paidByOptions: parsePaidByOptions(form.paidByOptionsText),
         paidToOptions: parsePaidByOptions(form.paidToOptionsText),
         ...(parentClient ? { parentClient } : {}),
@@ -121,6 +123,19 @@ export function ClientFormModal({ parentClient = null, initial = null, onClose, 
                 <option value="credit">Credit</option>
                 <option value="debit">Debit</option>
               </select>
+            </div>
+            <div className="field">
+              <label htmlFor="cgoal">Savings goal (optional)</label>
+              <input
+                id="cgoal"
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.goalAmount}
+                onChange={update("goalAmount")}
+                placeholder="e.g. 200000"
+              />
+              <div className="hint">Shown as a progress card on the Overview page once set.</div>
             </div>
           </div>
         )}

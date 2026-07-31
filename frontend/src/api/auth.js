@@ -7,3 +7,4 @@ export const authApi = {
   changePassword: (currentPassword, newPassword) =>
     api.post("/auth/change-password", { currentPassword, newPassword }),
 };
+

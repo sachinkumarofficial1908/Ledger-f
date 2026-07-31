@@ -83,3 +83,32 @@ export const api = {
   put: (path, data) => request(path, { method: "PUT", body: data ? JSON.stringify(data) : undefined }),
   del: (path) => request(path, { method: "DELETE" }),
 };
+
+// Uploads a binary payload (e.g. a generated .docx) and expects a binary
+// response back (e.g. the converted .pdf) - bypasses the JSON encode/decode
+// that `request()` above does, since neither side here is JSON.
+export async function postBinaryForBlob(path, blob, { isRetry = false } = {}) {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/octet-stream" },
+    body: blob,
+  });
+
+  if (res.status === 401 && !isRetry) {
+    const refreshed = await tryRefresh();
+    if (refreshed) return postBinaryForBlob(path, blob, { isRetry: true });
+  }
+
+  if (!res.ok) {
+    const contentType = res.headers.get("content-type") || "";
+    const body = contentType.includes("application/json") ? await res.json().catch(() => null) : null;
+    throw new ApiClientError(
+      body?.message || "Something went wrong. Please try again.",
+      res.status,
+      body?.details || null
+    );
+  }
+
+  return res.blob();
+}

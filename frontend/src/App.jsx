@@ -3,6 +3,7 @@ import { Routes, Route } from "react-router-dom";
 import { ProtectedRoute } from "./components/ProtectedRoute.jsx";
 import { Layout } from "./components/Layout.jsx";
 import Login from "./pages/Login.jsx";
+import Overview from "./pages/Overview.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import ClientDetail from "./pages/ClientDetail.jsx";
 import Reports from "./pages/Reports.jsx";
@@ -23,7 +24,8 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
 
-      <Route path="/" element={<Protected><Dashboard /></Protected>} />
+      <Route path="/" element={<Protected><Overview /></Protected>} />
+      <Route path="/clients" element={<Protected><Dashboard /></Protected>} />
       <Route path="/clients/:id" element={<Protected><ClientDetail /></Protected>} />
       <Route path="/reports" element={<Protected><Reports /></Protected>} />
       <Route path="/purchase-orders" element={<Protected><PurchaseOrders /></Protected>} />

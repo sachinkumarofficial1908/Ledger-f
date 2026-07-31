@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Icon } from "../components/Icon.jsx";
 import { Tilt3D } from "../components/Tilt3D.jsx";
 import { AnimatedMoney } from "../components/AnimatedMoney.jsx";
@@ -13,10 +13,11 @@ function formatMoney(n) {
 }
 
 export default function Dashboard() {
+  const [searchParams] = useSearchParams();
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(() => searchParams.get("search") || "");
   const [showCreate, setShowCreate] = useState(false);
 
   const load = useCallback(async (searchTerm) => {

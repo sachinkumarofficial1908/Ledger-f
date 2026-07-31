@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { Link, useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Icon } from "../components/Icon.jsx";
 import { Tilt3D } from "../components/Tilt3D.jsx";
 import { AnimatedMoney } from "../components/AnimatedMoney.jsx";
@@ -18,6 +18,7 @@ function formatMoney(n) {
 export default function ClientDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { isSuperAdmin } = useAuth();
 
   const [client, setClient] = useState(null);
@@ -66,6 +67,19 @@ export default function ClientDetail() {
   useEffect(() => {
     loadClient();
   }, [loadClient]);
+
+  // Lets the Overview page's "Add Transaction" flow land here with the
+  // create modal already open, via /clients/:id?add=1.
+  useEffect(() => {
+    if (searchParams.get("add") === "1") {
+      setTxnModal({ mode: "create" });
+      setSearchParams((params) => {
+        params.delete("add");
+        return params;
+      }, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const handlePaidByMasterUpdated = (event) => {

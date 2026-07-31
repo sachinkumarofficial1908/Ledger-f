@@ -5,7 +5,8 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { clientsApi } from "../api/clients.js";
 
 const links = [
-  { to: "/", label: "Dashboard", icon: "grid", end: true },
+  { to: "/", label: "Overview", icon: "grid", end: true },
+  { to: "/clients", label: "Clients", icon: "site" },
   { label: "Paid by", icon: "users", action: "paidByMaster" },
   { to: "/reports", label: "Reports", icon: "chart" },
   { to: "/purchase-orders", label: "Purchase Orders", icon: "layers" },
@@ -19,6 +20,7 @@ export function Layout({ children }) {
   const location = useLocation();
   const clientId = location.pathname.startsWith("/clients/") ? location.pathname.split("/")[2] : null;
   const [theme, setTheme] = useState(() => localStorage.getItem("ledger-theme") || "dark");
+  const [topbarSearch, setTopbarSearch] = useState("");
   const [showPaidByMaster, setShowPaidByMaster] = useState(false);
   const [masterValues, setMasterValues] = useState([]); // array of names
   const [masterInput, setMasterInput] = useState("");
@@ -181,16 +183,43 @@ export function Layout({ children }) {
 
       <main className="main">
         <div className="topbar">
-          <div className="brand" style={{ padding: 0 }}>
+          <div className="brand topbar__brand" style={{ padding: 0 }}>
             <span className="brand__mark">
               <Icon name="wallet" size={15} />
             </span>
             LedgerBook
           </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button className="themeToggle" onClick={() => setTheme((current) => (current === "dark" ? "light" : "dark"))} aria-label="Toggle theme">
+
+          <form
+            className="topbar__search"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (topbarSearch.trim()) navigate(`/clients?search=${encodeURIComponent(topbarSearch.trim())}`);
+            }}
+          >
+            <Icon name="search" size={15} />
+            <input
+              placeholder="Search clients..."
+              value={topbarSearch}
+              onChange={(e) => setTopbarSearch(e.target.value)}
+              aria-label="Search clients"
+            />
+          </form>
+
+          <div className="topbar__actions">
+            <button className="iconBtn" aria-label="Notifications">
+              <Icon name="bell" size={16} />
+            </button>
+            <button
+              className="themeToggle"
+              onClick={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
+              aria-label="Toggle theme"
+            >
               {theme === "dark" ? "☀ Light" : "☾ Dark"}
             </button>
+            <span className="userChip__avatar" title={user?.name}>
+              {initials}
+            </span>
             <button className="iconBtn" onClick={handleLogout} aria-label="Log out">
               <Icon name="logout" size={15} />
             </button>

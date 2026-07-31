@@ -111,6 +111,31 @@ const paths = {
       <path d="M12 15v2" />
     </>
   ),
+  bell: (
+    <>
+      <path d="M6 10a6 6 0 0112 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6z" />
+      <path d="M10 19a2 2 0 004 0" />
+    </>
+  ),
+  target: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <circle cx="12" cy="12" r="5" />
+      <circle cx="12" cy="12" r="1.5" />
+    </>
+  ),
+  arrowUp: (
+    <>
+      <path d="M12 19V6" />
+      <path d="M6 11l6-6 6 6" />
+    </>
+  ),
+  arrowDown: (
+    <>
+      <path d="M12 5v13" />
+      <path d="M6 13l6 6 6-6" />
+    </>
+  ),
 };
 
 export function Icon({ name, size = 20, ...rest }) {
